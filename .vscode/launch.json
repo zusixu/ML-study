@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: l1.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/LinearModel/l1.py",
+            "console": "integratedTerminal",
+            "args": ["0"]
+        },
+        {
+            "name": "Python: l2.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/LinearModel/l2.py",
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "运行 l1.py 和 l2.py",
+            "configurations": ["Python: l1.py","Python: l2.py" ],
+            "presentation": {
+                "hidden": false,
+                "group": "",
+                "order": 1
+            }
+        }
+    ]
+}
