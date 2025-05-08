@@ -550,7 +550,10 @@ class C45:
 
 
 if __name__ == '__main__':
-    data = pd.read_csv("D:\\project\DataScience\DecisionTree\data.csv",encoding='gbk')
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    data_path = os.path.join(script_dir, "data.csv")
+    data = pd.read_csv(data_path, encoding='gbk')
     attributes = data.columns[:-1]
     attributes = list(attributes)
     attributeProps = [0,1,0]
