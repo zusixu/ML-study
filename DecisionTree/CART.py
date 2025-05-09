@@ -1,8 +1,15 @@
 """
 Cart树实现
 """
+from scipy.stats import f
+
+
+
+import pandas as pd
 import numpy as np
+from math import inf
 from collections import defaultdict
+import copy
 
 # 缺失值统一设置为Nan
 NAN = 'Nan'
@@ -20,7 +27,7 @@ def type_check(func):
         return func(*args, **kwargs)
     return wrapper
 
-class node:
+class Node:
     def __init__(self):
         self.feature = None # 特征
         self.threshold = None # 分割阈值
@@ -32,7 +39,7 @@ class node:
 
 class CART:
     def __init__(self):
-        self.root = node()
+        self.root = Node()
 
     
 
@@ -55,18 +62,20 @@ class CART:
             gini -= prob*prob
         return gini
 
-    def calMse(self, data: np.ndarray, y_pred: float)-> float:
+    def calMse(self, data: np.ndarray)-> tuple[float,float]:
         """
         计算均方误差
         param:
             data: 训练数据
-            y_pred: 预测值
         return:
             mse: 均方误差
+            y_pred: 预测值
         """
         numEnts = np.sum(data[:, -2])
+        y_pred = np.sum(data[:, -1]*data[:, -2]) / numEnts
         mse = np.sum((data[:, -1] - y_pred)**2*data[:,-2]) / numEnts
-        return mse
+        return mse, y_pred
+
 
     def splitDataSetWithNull(self, data: np.ndarray, attrIndex: int, threshold, attrs_type: str)-> tuple[np.ndarray, np.ndarray]:
         """
@@ -92,12 +101,17 @@ class CART:
             right = data[data[:, attrIndex] != threshold]
         else:
             raise ValueError("attrs_type must be 'num' or 'cat'")
+        
         # 输出结果
         data_left = np.concatenate((left, data_nan), axis=0)
+        data_left = data_left[np.where(data_left[:, attrIndex] == NAN), -2] * np.sum(left[:, -2]) / (np.sum(left[:, -2]) + np.sum(right[:, -2]))
         data_right = np.concatenate((right, data_nan), axis=0)
-        data_left = np.delete(data_left, attrIndex, axis=1)
-        data_right = np.delete(data_right, attrIndex, axis=1)
+        data_right = data_right[np.where(data_right[:, attrIndex] == NAN), -2] * np.sum(right[:, -2]) / (np.sum(left[:, -2]) + np.sum(right[:, -2]))
+        # 删除特征列
+        if attrs_type == 'cat':
+            data_left = np.delete(data_right, attrIndex, axis=1)
         return data_left, data_right
+
     def isSame(self, data: np.ndarray)-> bool:
         """
         判断数据集属性取值是否一致
@@ -126,8 +140,92 @@ class CART:
         # 所有行都相同，返回True
         return True
 
+    def chooseBestValueandThreshold(self, task: str, data: np.ndarray, index: int, attrs_type: list)-> tuple[float, str or float]:
+        """
+        选择最优划分属性
+        param:
+            task: 任务类型，分类(classfication)或回归(regression)
+            data: 训练数据
+            index: 特征索引
+            attrs_type: 特征类型
+        return:
+            bestthreshold: 最优划分阈值
+            bestcalmetric: 最优划分指标
+        """
+        uniqueVals = list(set(data[:, index]))
+        bestthreshold = None
+        bestcalmetric = inf
+        if NAN in uniqueVals:
+            uniqueVals.remove(NAN)
+            subdata = data[np.where(data[:, index] != NAN)]
+        else:
+            subdata = copy.copy(data)
+        # 连续特征
+        if attrs_type[index] == 1:
+            # 只有一个取值，只有左子数没有右子树
+            if len(uniqueVals) == 1:
+                subdata_left = subdata[np.where(subdata[:, index] <= uniqueVals[0])]
+                if task == 'classification':
+                    bestthreshold = uniqueVals[0]
+                    bestcalmetric = self.calGini(subdata_left)
+                elif task == 'regression':
+                    bestcalmetric, bestthreshold = self.calMse(subdata_left)
+            else:
+                for j in range(len(uniqueVals)-2):
+                        threshold = (uniqueVals[j] + uniqueVals[j+1]) / 2
+                        subdata_left = subdata[np.where(subdata[:, index] <= threshold)]
+                        subdata_right = subdata[np.where(subdata[:, index] > threshold)]
+                        if task == 'classification':
+                            calmetric = self.calGini(subdata_left) + self.calGini(subdata_right)
+                        elif task == 'regression':
+                            calmetric, _ = self.calMse(subdata_left) + self.calMse(subdata_right)
+                        if calmetric < bestcalmetric:
+                            bestcalmetric = calmetric
+                            bestthreshold = threshold
+        # 离散特征
+        elif attrs_type[index] == 0:
+            for j in range(len(uniqueVals)):
+                threshold = uniqueVals[j]
+                subdata_left = subdata[np.where(subdata[:, index] == uniqueVals[j])]
+                subdata_right = subdata[np.where(subdata[:, index] != uniqueVals[j])]
+                if task == 'classification':
+                    calmetric = self.calGini(subdata_left) + self.calGini(subdata_right)
+                elif task =='regression':
+                    calmetric, _ = self.calMse(subdata_left) + self.calMse(subdata_right)
+                if calmetric < bestcalmetric:
+                    bestcalmetric = calmetric
+                    bestthreshold = threshold
+        return bestcalmetric, bestthreshold
+
+    def chooseBestFeature(self, task: str, data: np.ndarray, attrs_type: list)-> tuple[float, int]:
+        """
+        选择最优划分属性
+        param:
+            task: 任务类型，分类(classfication)或回归(regression)
+            data: 训练数据
+            attrs_type: 特征类型
+        return:
+            bestthreshold: 最优划分阈值
+            bestfeatureIndex: 最优划分属性索引
+        """
+        featureNum = data.shape[1] - 2
+        threshold = 0
+        bestfeatureIndex = 0
+        bestthreshold = None
+        metric = 0
+        bestmetric = inf
+
+        for i in range(featureNum):
+            metric, threshold = self.chooseBestValueandThreshold(task, data, i, attrs_type)
+            if metric < bestmetric:
+                bestmetric = metric
+                bestfeatureIndex = i
+                bestthreshold = threshold
+        return bestthreshold, bestfeatureIndex
+           
+                    
     @type_check
-    def buildTree(self, task: str, data: np.ndarray, attrs: list, attrs_type: list)-> node:
+    def buildTree(self, task: str, data: np.ndarray, attrs: list, attrs_type: list)-> Node:
         """
         递归构建CART树
         param:
@@ -158,7 +256,34 @@ class CART:
             node.isleaf = True
             return node
 
-    def fit(self, task: str, data: np.ndarray, attrs: list, attrs_type: list)-> node:
+        # 选择最优划分属性
+        bestthreshold, bestfeatureIndex = self.chooseBestFeature(task, data, attrs_type)
+        # 创建分支节点
+        node = Node()
+        node.feature = attrs[bestfeatureIndex]
+        node.threshold = bestthreshold
+
+        # 离散特征
+        if attrs_type[bestfeatureIndex] == 0:
+            # 划分数据集
+            data_left, data_right = self.splitDataSetWithNull(data, bestfeatureIndex, bestthreshold, "cat")
+            # 递归构建子树
+            attrs_left = attrs[:bestfeatureIndex] + attrs[bestfeatureIndex+1:]
+            attrs_type_left = attrs_type[:bestfeatureIndex] + attrs_type[bestfeatureIndex+1:]
+            node.left = self.buildTree(task, data_left, attrs_left, attrs_type_left)
+            node.right = self.buildTree(task, data_right, attrs, attrs_type)
+
+        # 连续特征
+        elif attrs_type[bestfeatureIndex] == 1:
+            # 划分数据集
+            data_left, data_right = self.splitDataSetWithNull(data, bestfeatureIndex, bestthreshold, "num")
+            # 递归构建子树
+            node.left = self.buildTree(task, data_left, attrs, attrs_type)
+            node.right = self.buildTree(task, data_right, attrs, attrs_type)
+        return node
+        
+
+    def fit(self, task: str, data: np.ndarray, attrs: list, attrs_type: list)-> Node:
         """
         构建CART树
         param:
@@ -178,3 +303,16 @@ class CART:
 
     def predict(self, X):
         pass
+
+if __name__ == '__main__':
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    data_path = os.path.join(script_dir, "data.csv")
+    data = pd.read_csv(data_path, encoding='gbk')
+    attributes = data.columns[:-1]
+    attributes = list(attributes)
+    attributeProps = [0,1,0]
+    data = data.values
+    cart = CART()
+    cart.fit('classification', data, attributes, attributeProps)
+    print("finish")
