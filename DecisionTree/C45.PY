@@ -315,7 +315,7 @@ class C45:
             IV = 0.0000000001
         gain = nonEmptyNum / totalNum * (baseEnt - newEnt)
         gainRatio = gain / IV
-        return gainRatio, PivotValue 
+        return gainRatio, PivotValue, gain 
 
     def chooseBestFeatureToSplit(self, data: np.ndarray, attributes: list, attributeProps: list):
         """
@@ -332,12 +332,17 @@ class C45:
         bestGainRatio = -inf
         bestFeature = -1
         bestPivotValue = None
+        attrvalue = []
         for i in range(numAttributes):
-            gainRatio, pivotValue = self.calcInfoGainRatio(data, i, attributeProps)
-            if gainRatio > bestGainRatio:
-                bestGainRatio = gainRatio
-                bestFeature = i
-                bestPivotValue = pivotValue
+            gainRatio, pivotValue, gain = self.calcInfoGainRatio(data, i, attributeProps)
+            attrvalue.append([i, gainRatio, pivotValue, gain])
+        aver_gain = sum([x[3] for x in attrvalue]) / numAttributes
+        for i in range(numAttributes):
+            if attrvalue[i][3] >= aver_gain:
+                if attrvalue[i][1] > bestGainRatio:
+                    bestGainRatio = attrvalue[i][1]
+                    bestFeature = attrvalue[i][0]
+                    bestPivotValue = attrvalue[i][2]   
         return bestFeature, bestPivotValue
 
     def majorityCnt(self, classList):

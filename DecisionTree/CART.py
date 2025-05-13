@@ -60,6 +60,126 @@ class Node:
             dot_lines.append(f'    node{this_id} -> node{right_id} [label="False"];')
         return this_id, next_id
 
+    def get_depth(self):
+        """
+        计算树的深度
+        :return: 树的最大深度
+        """
+        if self.isleaf:
+            return 1
+        left_depth = self.left.get_depth() if self.left else 0
+        right_depth = self.right.get_depth() if self.right else 0
+        return max(left_depth, right_depth) + 1
+
+    def get_width(self):
+        """
+        计算树的宽度（叶子节点数量）
+        :return: 叶子节点数量
+        """
+        if self.isleaf:
+            return 1
+        left_width = self.left.get_width() if self.left else 0
+        right_width = self.right.get_width() if self.right else 0
+        return left_width + right_width
+
+    def _draw_node(self, ax, x, y, node_width, node_height, level_height, total_width):
+        """
+        递归绘制节点及其子节点
+        :param ax: matplotlib轴对象
+        :param x: 节点中心x坐标
+        :param y: 节点中心y坐标
+        :param node_width: 节点宽度
+        :param node_height: 节点高度
+        :param level_height: 层级高度
+        :param total_width: 总宽度
+        :return: 叶子节点位置列表
+        """
+        import matplotlib.patches as patches
+        # 绘制当前节点
+        if self.isleaf:
+            # 叶子节点用圆角矩形表示
+            rect = patches.FancyBboxPatch(
+                (x - node_width/2, y - node_height/2),
+                node_width, node_height,
+                boxstyle=patches.BoxStyle("Round", pad=0.2),
+                facecolor='lightgreen', edgecolor='black', alpha=0.7
+            )
+            ax.add_patch(rect)
+            ax.text(x, y, f"类别: {self.label}", ha='center', va='center', fontsize=10)
+            return [(x, y)]
+        else:
+            # 非叶子节点用矩形表示
+            rect = patches.Rectangle(
+                (x - node_width/2, y - node_height/2),
+                node_width, node_height,
+                facecolor='lightblue', edgecolor='black', alpha=0.7
+            )
+            ax.add_patch(rect)
+            # 节点文本
+            if self.classlabel == 'num':
+                node_text = f"{self.feature}\n阈值: {self.threshold:.2f}"
+            else:
+                node_text = f"{self.feature}\n= {self.threshold}"
+            ax.text(x, y, node_text, ha='center', va='center', fontsize=10)
+
+            # 计算子节点位置
+            child_count = sum([self.left is not None, self.right is not None])
+            if child_count == 0:
+                return [(x, y)]
+            child_total_width = 0
+            if self.left:
+                child_total_width += self.left.get_width()
+            if self.right:
+                child_total_width += self.right.get_width()
+            leaf_positions = []
+            child_x_offset = x - (total_width / 2)
+            # 左子树
+            if self.left:
+                left_width = total_width * (self.left.get_width() / child_total_width)
+                left_x = child_x_offset + (left_width / 2)
+                left_y = y - level_height
+                ax.plot([x, left_x], [y - node_height/2, left_y + node_height/2], 'k-')
+                ax.text((x + left_x) / 2, (y - node_height/2 + left_y + node_height/2) / 2, 
+                        "True", ha='center', va='center', fontsize=8, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+                leaf_positions.extend(self.left._draw_node(ax, left_x, left_y, node_width, node_height, level_height, left_width))
+                child_x_offset += left_width
+            # 右子树
+            if self.right:
+                right_width = total_width * (self.right.get_width() / child_total_width)
+                right_x = child_x_offset + (right_width / 2)
+                right_y = y - level_height
+                ax.plot([x, right_x], [y - node_height/2, right_y + node_height/2], 'k-')
+                ax.text((x + right_x) / 2, (y - node_height/2 + right_y + node_height/2) / 2, 
+                        "False", ha='center', va='center', fontsize=8, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+                leaf_positions.extend(self.right._draw_node(ax, right_x, right_y, node_width, node_height, level_height, right_width))
+            return leaf_positions
+
+    def visualize(self, figsize=(12, 8), title="CART决策树可视化"):
+        """
+        可视化CART决策树
+        :param figsize: 图形大小
+        :param title: 图形标题
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib
+        matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'SimSun', 'Arial Unicode MS']
+        matplotlib.rcParams['axes.unicode_minus'] = False
+        fig, ax = plt.subplots(figsize=figsize)
+        depth = self.get_depth()
+        width = self.get_width()
+        node_width = 1.5
+        node_height = 0.8
+        level_height = 2.0
+        total_width = max(width * 2, 10)
+        total_height = depth * level_height
+        ax.set_xlim(-total_width/2, total_width/2)
+        ax.set_ylim(-total_height, 1)
+        self._draw_node(ax, 0, 0, node_width, node_height, level_height, total_width)
+        ax.set_title(title)
+        ax.axis('off')
+        plt.tight_layout()
+        plt.show()
+
 class CART:
     def __init__(self, min_samples_split=100, min_impurity_decrease=1e-2, max_depth=15):
         """
@@ -435,53 +555,54 @@ class CART:
         
 
 if __name__ == '__main__':
-    # import os
-    # script_dir = os.path.dirname(os.path.abspath(__file__))
-    # data_path = os.path.join(script_dir, "data.csv")
-    # data = pd.read_csv(data_path, encoding='gbk')
-    # attributes = data.columns[:-1]
-    # attributes = list(attributes)
-    # attributeProps = [0,1,0]
-    # data = data.values
-    # cart = CART()
-    # cart.fit('classification', data, attributes, attributeProps)
-    # print("classification train finish")
-    # # 准确率
-    # y_true = data[:,-1]
-    # y_pred = cart.predict(data[:,:-1], attributes)
-    # accuracy = sum(y_pred == y_true) / len(data)
-    # print(f"classification accuracy: {accuracy}")
-
+    import os
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    data_path = os.path.join(script_dir, "data.csv")
+    data = pd.read_csv(data_path, encoding='gbk')
+    attributes = data.columns[:-1]
+    attributes = list(attributes)
+    attributeProps = [0,1,0]
+    data = data.values
+    cart = CART(min_samples_split=5, max_depth=20,min_impurity_decrease=0.00001)
+    cart.fit('classification', data, attributes, attributeProps)
+    print("classification train finish")
+    # 准确率
+    y_true = data[:,-1]
+    y_pred = cart.predict(data[:,:-1], attributes)
+    accuracy = sum(y_pred == y_true) / len(data)
+    print(f"classification accuracy: {accuracy}")
+    # 可视化
+    cart.root.visualize()
     # 回归任务测试
     # fetch dataset 
-    wine_quality = fetch_ucirepo(id=186) 
+    # wine_quality = fetch_ucirepo(id=186) 
     
-    # data (as pandas dataframes) 
-    X = wine_quality.data.features 
-    y = wine_quality.data.targets 
+    # # data (as pandas dataframes) 
+    # X = wine_quality.data.features 
+    # y = wine_quality.data.targets 
     
-    # metadata 
-    print(wine_quality.metadata) 
+    # # metadata 
+    # print(wine_quality.metadata) 
     
-    # variable information 
-    print(wine_quality.variables)
-    reg_data_df = pd.concat([X, y], axis=1)
-    reg_attributes = list(X.columns)
-    reg_attributeProps = [1,1,1,1,1,1,1,1,1,1,1]
-    reg_data = reg_data_df.values
-    reg_cart = CART(min_samples_split=1, max_depth=20,min_impurity_decrease=0.00001)
-    reg_cart.fit('regression', reg_data, reg_attributes, reg_attributeProps)
-    print("regression train finish")
+    # # variable information 
+    # print(wine_quality.variables)
+    # reg_data_df = pd.concat([X, y], axis=1)
+    # reg_attributes = list(X.columns)
+    # reg_attributeProps = [1,1,1,1,1,1,1,1,1,1,1]
+    # reg_data = reg_data_df.values
+    # reg_cart = CART(min_samples_split=1, max_depth=20,min_impurity_decrease=0.00001)
+    # reg_cart.fit('regression', reg_data, reg_attributes, reg_attributeProps)
+    # print("regression train finish")
     
     # 计算均方误差
-    reg_y_true = reg_data[:,-1]
-    reg_y_pred = reg_cart.predict(reg_data[:,:-1], reg_attributes)
-    mse = np.mean((reg_y_pred.astype(float) - reg_y_true) ** 2)
-    print(f"regression MSE: {mse}")
-    # 生成 graphviz dot 文件
-    dot_lines = ["digraph CART {", "    node [fontname=\"FangSong\"];"]
-    reg_cart.root.to_dot(dot_lines)
-    dot_lines.append("}")
-    with open("cart_tree.dot", "w", encoding="utf-8") as f:
-        f.write("\n".join(dot_lines))
-    print("已生成 dot 文件：cart_tree.dot，请用 graphviz 渲染。")
+    # reg_y_true = reg_data[:,-1]
+    # reg_y_pred = reg_cart.predict(reg_data[:,:-1], reg_attributes)
+    # mse = np.mean((reg_y_pred.astype(float) - reg_y_true) ** 2)
+    # print(f"regression MSE: {mse}")
+    # # 生成 graphviz dot 文件
+    # dot_lines = ["digraph CART {", "    node [fontname=\"FangSong\"];"]
+    # reg_cart.root.to_dot(dot_lines)
+    # dot_lines.append("}")
+    # with open("cart_tree.dot", "w", encoding="utf-8") as f:
+    #     f.write("\n".join(dot_lines))
+    # print("已生成 dot 文件：cart_tree.dot，请用 graphviz 渲染。")
