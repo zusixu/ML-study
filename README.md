@@ -10,4 +10,4 @@ Here is the list of algorithms that have been implemented:
     - [CART](https://github.com/zusixu/Machine-Learing/blob/main/DecisionTree/CART.py)
         - I find a bug in CART.py. When there are missing values for a certain attribute in the dataset to be split, and other attributes cannot be used for splitting based on the Gini index, the current approach is to assign the missing values to all subtrees and update the count weights. However, this leads to poor performance on data.csv. I have not yet figured out how to solve this problem.
 - Neural Network
-    - [MLP(BP)](https://github.com/zusixu/Machine-Learing/blob/main/NeuralNetwork/MLP.py): It's intersting to achieve a mlp model with only numpy.
+    - [MLP(BP)](https://github.com/zusixu/Machine-Learing/blob/main/NeuralNetwork/MLP.py): It's intersting to achieve a mlp model with only numpy. In the future, I will try to use numpy to implement some functions of pytorch.
