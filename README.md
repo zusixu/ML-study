@@ -11,7 +11,7 @@ Here is the list of algorithms that have been implemented:
         - I find a bug in CART.py. When there are missing values for a certain attribute in the dataset to be split, and other attributes cannot be used for splitting based on the Gini index, the current approach is to assign the missing values to all subtrees and update the count weights. However, this leads to poor performance on data.csv. I have not yet figured out how to solve this problem.
 - Neural Network
     - [MLP(BP)](https://github.com/zusixu/Machine-Learing/blob/main/NeuralNetwork/MLP.py): It's intersting to achieve a mlp model with only numpy. In the future, I will try to use numpy to implement some functions of pytorch. [This](https://www.cnblogs.com/pinard/p/6422831.html#) is a very good reference, which provides detailed formula derivations.
-    - [RNN](https://github.com/zusixu/Machine-Learing/blob/main/NeuralNetwork/RNN.py) I have already create the file, and I will finish it /doge
+    - [RNN](https://github.com/zusixu/Machine-Learing/blob/main/NeuralNetwork/RNN.py) I have already create the file, and I will finish it (Maybe)/doge  :)
 
 - Cluster
-    - [K-Means](https://github.com/zusixu/Machine-Learing/blob/main/Cluster/KMeans.py)
+    - [K-Means](https://github.com/zusixu/Machine-Learing/blob/main/Cluster/KMeans.py) This is my first time know [broadcast](https://www.runoob.com/numpy/numpy-broadcast.html) in numpy, I think it's very useful and interesting. np.newaxis is helpful too.
