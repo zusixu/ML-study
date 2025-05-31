@@ -1,5 +1,9 @@
 # Introduction
 This is a project that reproduces common machine learning algorithms for learning machine learning. In the example.py file under each folder, the code implementation using the sklearn library directly is also provided. In the future, I will learn how to build these algorithms by sklearn.base, I think it will be a better way to learn how to build machine learning algorithms.
+# Environment
+```
+pip install requirements.txt
+```
 # Index
 Here is the list of algorithms that have been implemented:
 - Linear Model
@@ -14,4 +18,4 @@ Here is the list of algorithms that have been implemented:
     - [RNN](https://github.com/zusixu/Machine-Learing/blob/main/NeuralNetwork/RNN.py) I have already create the file, and I will finish it (Maybe)/doge  :)
 
 - Cluster
-    - [K-Means](https://github.com/zusixu/Machine-Learing/blob/main/Cluster/KMeans.py) This is my first time know [broadcast](https://www.runoob.com/numpy/numpy-broadcast.html) in numpy, I think it's very useful and interesting. np.newaxis is helpful too.
+    - [K-Means](https://github.com/zusixu/Machine-Learing/blob/main/Cluster/KMeans.py) This is my first time know [broadcast](https://www.runoob.com/numpy/numpy-broadcast.html) in numpy, I think it's very useful and interesting. np.newaxis is helpful too. WKMeans is a better version of KMeans, but I haven't figured out the [formula derivation](https://zhuanlan.zhihu.com/p/157106355) yet, so I will implement it in the future.

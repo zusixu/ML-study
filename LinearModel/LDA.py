@@ -2,6 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
+import matplotlib
+
+matplotlib.use('TkAgg')  # 或 'Agg', 'QtAgg' 等其他可用后端
+import matplotlib.pyplot as plt
 
 """
 LDA模型实现
